@@ -1,0 +1,160 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background: #f4f6fb;
+  color: #111827;
+}
+.app {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+}
+.topbar h1 {
+  margin: 0;
+  font-size: 24px;
+}
+.topbar p {
+  margin: 6px 0 0;
+  color: #6b7280;
+}
+.panel {
+  background: #fff;
+  border: 1px solid #dfe3ea;
+  border-radius: 10px;
+  padding: 14px;
+}
+.grid2 {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr 220px;
+}
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+input {
+  width: 100%;
+  border: 1px solid #cfd5df;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+}
+small {
+  display: block;
+  margin-top: 6px;
+  color: #6b7280;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.actions.compact {
+  gap: 6px;
+}
+.actions.compact button {
+  padding: 8px 10px;
+}
+.setup-steps {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+.setup-steps li {
+  color: #475569;
+  font-weight: 600;
+}
+.setup-steps li::marker {
+  color: #94a3b8;
+}
+.setup-steps li.done {
+  color: #166534;
+}
+.setup-steps li.done::marker {
+  color: #16a34a;
+}
+.setup-steps li.pending {
+  color: #92400e;
+}
+.setup-steps li.pending::marker {
+  color: #f59e0b;
+}
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #2563eb;
+  color: white;
+}
+button.secondary {
+  background: #e6ebf5;
+  color: #1f2937;
+}
+button.danger {
+  background: #dc2626;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.chip {
+  background: #eef2ff;
+  color: #1e40af;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.message {
+  min-height: 18px;
+  margin: 0;
+  color: #334155;
+}
+.logs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logs h2,
+.status h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+pre {
+  margin: 0;
+  border: 1px solid #d8deea;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 10px;
+  min-height: 260px;
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.4;
+}
+@media (max-width: 900px) {
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+}

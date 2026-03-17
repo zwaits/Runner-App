@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard Runner</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <h1>Dashboard Runner</h1>
+        <p>Run your Next.js dashboard locally with one app.</p>
+      </header>
+
+      <section class="panel">
+        <div class="logs-head">
+          <h2>Quick Setup</h2>
+          <div class="actions compact">
+            <button id="openNodeDownloadBtn" class="secondary">Install Node.js</button>
+            <button id="quickStartBtn">Quick Start</button>
+          </div>
+        </div>
+        <ol class="setup-steps">
+          <li id="stepNode">Install Node.js + npm</li>
+          <li id="stepFolder">Choose dashboard folder</li>
+          <li id="stepStart">Start dashboard</li>
+          <li id="stepOpen">Open dashboard URL</li>
+        </ol>
+      </section>
+
+      <section class="panel grid2">
+        <div>
+          <label>Project Folder</label>
+          <div class="row">
+            <input id="projectPath" type="text" placeholder="Select your app folder" readonly />
+            <button id="pickFolderBtn" class="secondary">Choose Folder</button>
+          </div>
+          <small id="projectHint">Must contain package.json with a dev or start script.</small>
+        </div>
+
+        <div>
+          <label>Port</label>
+          <input id="port" type="number" min="1" max="65535" value="3000" />
+          <small>Default is 3000</small>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="logs-head">
+          <h2>System Check</h2>
+          <button id="checkPrereqsBtn" class="secondary">Check Prerequisites</button>
+        </div>
+        <div class="chips">
+          <span id="nodeChip" class="chip">Node.js: checking...</span>
+          <span id="npmChip" class="chip">npm: checking...</span>
+        </div>
+        <p class="message">
+          If missing, install Node LTS from
+          <a href="https://nodejs.org" target="_blank" rel="noreferrer">nodejs.org</a>.
+        </p>
+      </section>
+
+      <section class="panel actions">
+        <button id="validateBtn" class="secondary">Validate</button>
+        <button id="startBtn">Install + Start</button>
+        <button id="stopBtn" class="danger">Stop</button>
+        <button id="openBtn" class="secondary">Open URL</button>
+      </section>
+
+      <section class="panel status">
+        <h2>Status</h2>
+        <div class="chips">
+          <span id="runningChip" class="chip">Stopped</span>
+          <span id="urlChip" class="chip">URL: -</span>
+        </div>
+        <p id="message" class="message"></p>
+      </section>
+
+      <section class="panel logs">
+        <div class="logs-head">
+          <h2>Logs</h2>
+          <button id="clearLogsBtn" class="secondary">Clear Logs</button>
+        </div>
+        <pre id="logs"></pre>
+      </section>
+    </div>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>
