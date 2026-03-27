@@ -79,10 +79,21 @@ This repo includes workflows:
 - User can also click **Check for Updates** in the Status panel.
 - When an update is downloaded, Runner prompts user to restart and install.
 
-## macOS first open note
-- This app is currently distributed without Apple notarization.
-- On first launch, macOS may warn about verification.
-- Open from Applications with right-click > Open once, then it runs normally.
+## Verified release setup (macOS + Windows)
+
+To get verified installs (no malware warning prompt), release builds must be signed:
+
+- macOS signing + notarization secrets:
+  - `MAC_CSC_LINK` (base64 `.p12` Developer ID Application certificate)
+  - `MAC_CSC_KEY_PASSWORD`
+  - `APPLE_API_KEY` (contents of App Store Connect API `.p8`)
+  - `APPLE_API_KEY_ID`
+  - `APPLE_API_ISSUER`
+- Windows signing secrets:
+  - `WIN_CSC_LINK` (base64 `.pfx` code-sign certificate)
+  - `WIN_CSC_KEY_PASSWORD`
+
+Release tag builds (`v*`) fail if these secrets are missing.
 
 ## Requirements on the user's machine
 - Node.js 20+ installed (includes npm).

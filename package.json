@@ -15,6 +15,7 @@
     "build:win:portable": "electron-builder --win portable --x64"
   },
   "devDependencies": {
+    "@electron/notarize": "^3.1.0",
     "electron": "^31.6.0",
     "electron-builder": "^24.13.3"
   },
@@ -31,8 +32,10 @@
         "dmg"
       ],
       "category": "public.app-category.productivity",
-      "hardenedRuntime": false,
-      "gatekeeperAssess": false
+      "hardenedRuntime": true,
+      "gatekeeperAssess": true,
+      "entitlements": "scripts/entitlements.mac.plist",
+      "entitlementsInherit": "scripts/entitlements.mac.plist"
     },
     "win": {
       "target": [
