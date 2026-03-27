@@ -21,25 +21,19 @@
   "build": {
     "appId": "com.lawyer.dashboardrunner",
     "productName": "Dashboard Runner",
-    "files": [
-      "src/**/*",
-      "package.json"
-    ],
     "directories": {
       "buildResources": "src/assets",
       "output": "dist"
     },
     "mac": {
       "target": [
-        "dmg",
-        "zip"
+        "dmg"
       ],
       "category": "public.app-category.productivity"
     },
     "win": {
       "target": [
-        "nsis",
-        "zip"
+        "nsis"
       ]
     },
     "nsis": {

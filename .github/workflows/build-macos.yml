@@ -44,7 +44,6 @@ jobs:
           name: dashboard-runner-macos
           path: |
             dist/*.dmg
-            dist/*.zip
             dist/*.blockmap
             dist/latest*.yml
           if-no-files-found: warn
