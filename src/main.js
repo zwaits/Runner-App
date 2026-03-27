@@ -3,7 +3,12 @@ const path = require("path");
 const fs = require("fs");
 const { spawn } = require("child_process");
 const https = require("https");
-const { autoUpdater } = require("electron-updater");
+let autoUpdater = null;
+try {
+  ({ autoUpdater } = require("electron-updater"));
+} catch {
+  autoUpdater = null;
+}
 
 const STATE_FILE = "runner-state.json";
 
@@ -206,6 +211,11 @@ async function installNodeWithPrompt() {
 }
 
 function configureAutoUpdater() {
+  if (!autoUpdater) {
+    sendUpdater({ status: "error", error: "Auto-update module is unavailable in this build." });
+    sendLog("==> Auto-update unavailable: electron-updater module missing.\n");
+    return;
+  }
   if (updaterConfigured) return;
   updaterConfigured = true;
 
@@ -267,6 +277,13 @@ async function checkForAppUpdates(manual = false) {
     }
     return { ok: true, skipped: true, reason: "Development mode" };
   }
+  if (!autoUpdater) {
+    const msg = "Auto-update unavailable: electron-updater module missing.";
+    sendUpdater({ status: "error", error: msg });
+    if (manual) return { ok: false, error: msg };
+    return { ok: true, skipped: true, reason: msg };
+  }
+
   configureAutoUpdater();
   try {
     await autoUpdater.checkForUpdates();
