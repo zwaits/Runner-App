@@ -408,7 +408,7 @@ function runNpm(args, cwd) {
     const child = spawn(resolvedNpmCommand, args, {
       cwd,
       env: { ...process.env },
-      shell: false
+      shell: isWindows()
     });
 
     child.stdout.on("data", (d) => sendLog(d.toString()));
@@ -464,7 +464,7 @@ async function startProject({ projectPath, port }) {
   appProcess = spawn(resolvedNpmCommand, cmdArgs, {
     cwd: projectPath,
     env,
-    shell: false
+    shell: isWindows()
   });
 
   currentUrl = `http://localhost:${currentPort}`;
