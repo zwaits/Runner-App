@@ -21,6 +21,7 @@
   "build": {
     "appId": "com.lawyer.dashboardrunner",
     "productName": "Dashboard Runner",
+    "afterSign": "scripts/after-sign.js",
     "directories": {
       "buildResources": "src/assets",
       "output": "dist"
@@ -29,7 +30,9 @@
       "target": [
         "dmg"
       ],
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
     },
     "win": {
       "target": [

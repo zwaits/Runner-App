@@ -20,6 +20,8 @@ let currentUrl = "";
 let currentScript = "dev";
 let prereqStatus = { nodeOk: false, npmOk: false, nodeVersion: "", npmVersion: "" };
 let updaterConfigured = false;
+let resolvedNodeCommand = process.platform === "win32" ? "node.exe" : "node";
+let resolvedNpmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 
 function stateFilePath() {
   return path.join(app.getPath("userData"), STATE_FILE);
@@ -77,6 +79,30 @@ function runSimpleCommand(command, args = []) {
     child.on("error", () => resolve({ ok: false, out: "", err: "" }));
     child.on("close", (code) => resolve({ ok: code === 0, out: out.trim(), err: err.trim() }));
   });
+}
+
+async function resolveCommand(binaryName) {
+  if (isWindows()) {
+    const whereResult = await runSimpleCommand("where", [binaryName]);
+    if (whereResult.ok && whereResult.out) {
+      const first = whereResult.out.split(/\r?\n/).map((x) => x.trim()).find(Boolean);
+      if (first) return first;
+    }
+    return binaryName;
+  }
+
+  const shellResult = await runSimpleCommand("/bin/zsh", ["-lc", `command -v ${binaryName}`]);
+  if (shellResult.ok && shellResult.out) {
+    const found = shellResult.out.split(/\r?\n/).map((x) => x.trim()).find(Boolean);
+    if (found) return found;
+  }
+
+  const common = ["/opt/homebrew/bin", "/usr/local/bin", "/opt/local/bin"];
+  for (const base of common) {
+    const candidate = path.join(base, binaryName);
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return binaryName;
 }
 
 function fetchText(url) {
@@ -298,8 +324,10 @@ async function checkForAppUpdates(manual = false) {
 }
 
 async function checkPrerequisites() {
-  const node = await runSimpleCommand(process.platform === "win32" ? "node.exe" : "node", ["-v"]);
-  const npm = await runSimpleCommand(npmCommand(), ["-v"]);
+  resolvedNodeCommand = await resolveCommand(isWindows() ? "node.exe" : "node");
+  resolvedNpmCommand = await resolveCommand(isWindows() ? "npm.cmd" : "npm");
+  const node = await runSimpleCommand(resolvedNodeCommand, ["-v"]);
+  const npm = await runSimpleCommand(resolvedNpmCommand, ["-v"]);
   prereqStatus = {
     nodeOk: node.ok,
     npmOk: npm.ok,
@@ -311,10 +339,6 @@ async function checkPrerequisites() {
 
 function isWindows() {
   return process.platform === "win32";
-}
-
-function npmCommand() {
-  return isWindows() ? "npm.cmd" : "npm";
 }
 
 function projectIsValid(projectPath) {
@@ -363,7 +387,7 @@ function stopProject() {
 
 function runNpm(args, cwd) {
   return new Promise((resolve, reject) => {
-    const child = spawn(npmCommand(), args, {
+    const child = spawn(resolvedNpmCommand, args, {
       cwd,
       env: { ...process.env },
       shell: false
@@ -419,7 +443,7 @@ async function startProject({ projectPath, port }) {
   };
 
   const cmdArgs = ["run", currentScript];
-  appProcess = spawn(npmCommand(), cmdArgs, {
+  appProcess = spawn(resolvedNpmCommand, cmdArgs, {
     cwd: projectPath,
     env,
     shell: false

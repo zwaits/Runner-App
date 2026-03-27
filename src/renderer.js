@@ -63,8 +63,8 @@ function setPrereqChip(el, label, ok, version) {
   if (!el) return;
   const ver = version ? ` ${version}` : "";
   el.textContent = `${label}: ${ok ? `OK${ver}` : "Missing"}`;
-  el.style.background = ok ? "#dcfce7" : "#fee2e2";
-  el.style.color = ok ? "#166534" : "#991b1b";
+  el.classList.remove("ok", "missing", "neutral");
+  el.classList.add(ok ? "ok" : "missing");
 }
 
 function setPrereqs(prereqs) {
@@ -83,7 +83,7 @@ function setPrereqs(prereqs) {
 
 function setMessage(msg, isError = false) {
   messageEl.textContent = msg || "";
-  messageEl.style.color = isError ? "#b91c1c" : "#334155";
+  messageEl.style.color = isError ? "#111111" : "#1f2937";
 }
 
 function setBusy(value) {
@@ -100,8 +100,8 @@ function setRunningStatus(isRunning, url, projectPath, port) {
   running = Boolean(isRunning);
   currentUrl = url || "";
   runningChipEl.textContent = running ? "Running" : "Stopped";
-  runningChipEl.style.background = running ? "#dcfce7" : "#fee2e2";
-  runningChipEl.style.color = running ? "#166534" : "#991b1b";
+  runningChipEl.classList.remove("ok", "missing", "neutral");
+  runningChipEl.classList.add(running ? "ok" : "missing");
 
   urlChipEl.textContent = `URL: ${currentUrl || "-"}`;
 
@@ -115,15 +115,13 @@ function setRunningStatus(isRunning, url, projectPath, port) {
 function setUpdaterStatus(text, ok = null) {
   if (!updaterChipEl) return;
   updaterChipEl.textContent = `Updates: ${text}`;
+  updaterChipEl.classList.remove("ok", "missing", "neutral");
   if (ok === true) {
-    updaterChipEl.style.background = "#dcfce7";
-    updaterChipEl.style.color = "#166534";
+    updaterChipEl.classList.add("ok");
   } else if (ok === false) {
-    updaterChipEl.style.background = "#fee2e2";
-    updaterChipEl.style.color = "#991b1b";
+    updaterChipEl.classList.add("missing");
   } else {
-    updaterChipEl.style.background = "#eef2ff";
-    updaterChipEl.style.color = "#1e40af";
+    updaterChipEl.classList.add("neutral");
   }
 }
 

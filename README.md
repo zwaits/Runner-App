@@ -79,6 +79,11 @@ This repo includes workflows:
 - User can also click **Check for Updates** in the Status panel.
 - When an update is downloaded, Runner prompts user to restart and install.
 
+## macOS first open note
+- This app is currently distributed without Apple notarization.
+- On first launch, macOS may warn about verification.
+- Open from Applications with right-click > Open once, then it runs normally.
+
 ## Requirements on the user's machine
 - Node.js 20+ installed (includes npm).
 - The dashboard folder must include its `.env` and required data/files.
