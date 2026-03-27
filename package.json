@@ -1,6 +1,6 @@
 {
   "name": "dashboard-runner-app",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Cross-platform local runner for Next.js dashboard apps",
   "main": "src/main.js",
   "author": "Zach Waits",
