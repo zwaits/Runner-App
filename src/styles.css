@@ -26,6 +26,9 @@ body {
   border-radius: 10px;
   padding: 14px;
 }
+.topbar strong {
+  color: #1d4ed8;
+}
 .grid2 {
   display: grid;
   gap: 14px;
@@ -129,6 +132,19 @@ button:disabled {
   margin: 0;
   color: #334155;
 }
+.restart-banner {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.hidden {
+  display: none !important;
+}
 .logs-head {
   display: flex;
   align-items: center;
@@ -138,6 +154,14 @@ button:disabled {
 .status h2 {
   margin: 0 0 8px;
   font-size: 16px;
+}
+.help-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: #334155;
+  line-height: 1.4;
 }
 pre {
   margin: 0;

@@ -1,7 +1,9 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell, clipboard } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { spawn } = require("child_process");
+const https = require("https");
+const { autoUpdater } = require("electron-updater");
 
 const STATE_FILE = "runner-state.json";
 
@@ -12,6 +14,7 @@ let currentPort = 3000;
 let currentUrl = "";
 let currentScript = "dev";
 let prereqStatus = { nodeOk: false, npmOk: false, nodeVersion: "", npmVersion: "" };
+let updaterConfigured = false;
 
 function stateFilePath() {
   return path.join(app.getPath("userData"), STATE_FILE);
@@ -54,6 +57,11 @@ function sendLog(line) {
   mainWindow.webContents.send("runner:log", String(line));
 }
 
+function sendUpdater(payload) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.send("runner:updater", payload);
+}
+
 function runSimpleCommand(command, args = []) {
   return new Promise((resolve) => {
     const child = spawn(command, args, { shell: false });
@@ -64,6 +72,212 @@ function runSimpleCommand(command, args = []) {
     child.on("error", () => resolve({ ok: false, out: "", err: "" }));
     child.on("close", (code) => resolve({ ok: code === 0, out: out.trim(), err: err.trim() }));
   });
+}
+
+function fetchText(url) {
+  return new Promise((resolve, reject) => {
+    const request = https.get(url, (res) => {
+      const status = res.statusCode || 0;
+      if (status >= 300 && status < 400 && res.headers.location) {
+        const next = new URL(res.headers.location, url).toString();
+        res.resume();
+        fetchText(next).then(resolve).catch(reject);
+        return;
+      }
+      if (status < 200 || status >= 300) {
+        res.resume();
+        reject(new Error(`HTTP ${status}`));
+        return;
+      }
+      let out = "";
+      res.setEncoding("utf8");
+      res.on("data", (chunk) => (out += chunk));
+      res.on("end", () => resolve(out));
+    });
+    request.on("error", reject);
+    request.end();
+  });
+}
+
+function downloadToFile(url, destination) {
+  return new Promise((resolve, reject) => {
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    const file = fs.createWriteStream(destination);
+    const request = https.get(url, (res) => {
+      const status = res.statusCode || 0;
+      if (status >= 300 && status < 400 && res.headers.location) {
+        const next = new URL(res.headers.location, url).toString();
+        res.resume();
+        file.close(() => {
+          try {
+            fs.unlinkSync(destination);
+          } catch {}
+          downloadToFile(next, destination).then(resolve).catch(reject);
+        });
+        return;
+      }
+      if (status < 200 || status >= 300) {
+        res.resume();
+        file.close(() => {
+          try {
+            fs.unlinkSync(destination);
+          } catch {}
+          reject(new Error(`Download failed (HTTP ${status})`));
+        });
+        return;
+      }
+      res.pipe(file);
+      file.on("finish", () => file.close(() => resolve(destination)));
+    });
+    request.on("error", (err) => {
+      file.close(() => {
+        try {
+          fs.unlinkSync(destination);
+        } catch {}
+        reject(err);
+      });
+    });
+    file.on("error", (err) => {
+      request.destroy(err);
+    });
+  });
+}
+
+async function getLatestLtsVersion() {
+  const raw = await fetchText("https://nodejs.org/dist/index.json");
+  const parsed = JSON.parse(raw);
+  if (!Array.isArray(parsed)) throw new Error("Unexpected Node release metadata format.");
+  const lts = parsed.find((entry) => Boolean(entry?.lts) && typeof entry?.version === "string");
+  if (!lts || typeof lts.version !== "string") {
+    throw new Error("Unable to determine latest Node LTS version.");
+  }
+  return lts.version;
+}
+
+async function installNodeWithPrompt() {
+  const pre = await checkPrerequisites();
+  if (pre.nodeOk && pre.npmOk) {
+    return { ok: true, alreadyInstalled: true, message: `Node.js ${pre.nodeVersion} and npm ${pre.npmVersion} are already installed.` };
+  }
+
+  const confirm = await dialog.showMessageBox(mainWindow, {
+    type: "question",
+    buttons: ["Install", "Cancel"],
+    defaultId: 0,
+    cancelId: 1,
+    title: "Install Node.js",
+    message: "Node.js + npm are required to run the dashboard.",
+    detail:
+      "Runner will download the latest Node LTS installer and launch it. Windows may ask for admin permission. Continue?"
+  });
+  if (confirm.response !== 0) return { ok: false, canceled: true, message: "Node install canceled." };
+
+  // Auto-install flow currently implemented for Windows. For other platforms, open official download page.
+  if (!isWindows()) {
+    await shell.openExternal("https://nodejs.org/en/download");
+    return {
+      ok: true,
+      launched: false,
+      message: "Opened nodejs.org download page. Install Node LTS, then reopen Runner and click Check Prerequisites."
+    };
+  }
+
+  const version = await getLatestLtsVersion();
+  const arch = process.arch === "x64" ? "x64" : "x64";
+  const fileName = `node-${version}-${arch}.msi`;
+  const installerUrl = `https://nodejs.org/dist/${version}/${fileName}`;
+  const destination = path.join(app.getPath("temp"), "dashboard-runner", fileName);
+
+  sendLog(`\n==> Downloading Node installer: ${installerUrl}\n`);
+  await downloadToFile(installerUrl, destination);
+  sendLog(`==> Download complete: ${destination}\n`);
+
+  const openResult = await shell.openPath(destination);
+  if (openResult) {
+    throw new Error(openResult);
+  }
+
+  return {
+    ok: true,
+    launched: true,
+    message:
+      "Node installer launched. Complete installation, then reopen Dashboard Runner and click Check Prerequisites."
+  };
+}
+
+function configureAutoUpdater() {
+  if (updaterConfigured) return;
+  updaterConfigured = true;
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on("checking-for-update", () => {
+    sendLog("\n==> Checking for app updates...\n");
+    sendUpdater({ status: "checking" });
+  });
+
+  autoUpdater.on("update-available", (info) => {
+    sendLog(`==> Update available: ${info?.version ?? "new version"}\n`);
+    sendUpdater({ status: "available", version: info?.version ?? "" });
+  });
+
+  autoUpdater.on("update-not-available", (info) => {
+    sendLog(`==> App is up to date (${info?.version ?? "current"}).\n`);
+    sendUpdater({ status: "up-to-date", version: info?.version ?? "" });
+  });
+
+  autoUpdater.on("error", (error) => {
+    sendLog(`==> Update check failed: ${error?.message || String(error)}\n`);
+    sendUpdater({ status: "error", error: error?.message || String(error) });
+  });
+
+  autoUpdater.on("download-progress", (progress) => {
+    sendUpdater({
+      status: "downloading",
+      percent: Number(progress?.percent ?? 0),
+      transferred: Number(progress?.transferred ?? 0),
+      total: Number(progress?.total ?? 0)
+    });
+  });
+
+  autoUpdater.on("update-downloaded", async (info) => {
+    sendLog(`==> Update downloaded (${info?.version ?? "latest"}).\n`);
+    sendUpdater({ status: "downloaded", version: info?.version ?? "" });
+    const result = await dialog.showMessageBox(mainWindow, {
+      type: "question",
+      buttons: ["Restart Now", "Later"],
+      defaultId: 0,
+      cancelId: 1,
+      title: "Update Ready",
+      message: "A new Dashboard Runner update has been downloaded.",
+      detail: "Restart now to apply the update?"
+    });
+    if (result.response === 0) {
+      setImmediate(() => autoUpdater.quitAndInstall());
+    }
+  });
+}
+
+async function checkForAppUpdates(manual = false) {
+  if (!app.isPackaged) {
+    if (manual) {
+      sendUpdater({ status: "skipped-dev" });
+      return { ok: true, skipped: true, reason: "Development mode" };
+    }
+    return { ok: true, skipped: true, reason: "Development mode" };
+  }
+  configureAutoUpdater();
+  try {
+    await autoUpdater.checkForUpdates();
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    sendLog(`==> Auto-update check failed: ${message}\n`);
+    sendUpdater({ status: "error", error: message });
+    if (manual) return { ok: false, error: message };
+    return { ok: true, skipped: true, reason: message };
+  }
 }
 
 async function checkPrerequisites() {
@@ -286,9 +500,35 @@ app.whenReady().then(() => {
     return { ok: true };
   });
 
+  ipcMain.handle("runner:copy-url", async (_event, url) => {
+    const target = url || currentUrl;
+    if (!target) return { ok: false, error: "No URL available." };
+    clipboard.writeText(target);
+    return { ok: true };
+  });
+
   ipcMain.handle("runner:open-node-download", async () => {
     await shell.openExternal("https://nodejs.org/en/download");
     return { ok: true };
+  });
+
+  ipcMain.handle("runner:check-updates", async () => {
+    return checkForAppUpdates(true);
+  });
+
+  ipcMain.handle("runner:install-node", async () => {
+    try {
+      const result = await installNodeWithPrompt();
+      return result;
+    } catch (error) {
+      sendLog(`\nNode installer error: ${error instanceof Error ? error.message : String(error)}\n`);
+      await shell.openExternal("https://nodejs.org/en/download");
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : "Unable to launch Node installer.",
+        fallbackOpened: true
+      };
+    }
   });
 
   void checkPrerequisites().then((result) => {
@@ -300,6 +540,15 @@ app.whenReady().then(() => {
       prereqs: result
     });
   });
+
+  if (app.isPackaged) {
+    setTimeout(() => {
+      void checkForAppUpdates(false);
+    }, 3000);
+    setInterval(() => {
+      void checkForAppUpdates(false);
+    }, 6 * 60 * 60 * 1000);
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

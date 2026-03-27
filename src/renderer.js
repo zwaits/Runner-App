@@ -2,6 +2,7 @@ const projectPathEl = document.getElementById("projectPath");
 const portEl = document.getElementById("port");
 const runningChipEl = document.getElementById("runningChip");
 const urlChipEl = document.getElementById("urlChip");
+const updaterChipEl = document.getElementById("updaterChip");
 const messageEl = document.getElementById("message");
 const logsEl = document.getElementById("logs");
 const nodeChipEl = document.getElementById("nodeChip");
@@ -10,6 +11,7 @@ const stepNodeEl = document.getElementById("stepNode");
 const stepFolderEl = document.getElementById("stepFolder");
 const stepStartEl = document.getElementById("stepStart");
 const stepOpenEl = document.getElementById("stepOpen");
+const restartBannerEl = document.getElementById("restartBanner");
 
 const pickFolderBtn = document.getElementById("pickFolderBtn");
 const checkPrereqsBtn = document.getElementById("checkPrereqsBtn");
@@ -19,12 +21,15 @@ const validateBtn = document.getElementById("validateBtn");
 const startBtn = document.getElementById("startBtn");
 const stopBtn = document.getElementById("stopBtn");
 const openBtn = document.getElementById("openBtn");
+const copyUrlBtn = document.getElementById("copyUrlBtn");
 const clearLogsBtn = document.getElementById("clearLogsBtn");
+const checkUpdatesBtn = document.getElementById("checkUpdatesBtn");
 
 let currentUrl = "";
 let running = false;
 let hasNode = false;
 let hasNpm = false;
+let busy = false;
 
 function setStepState(el, state) {
   if (!el) return;
@@ -43,11 +48,15 @@ function updateStepGuide() {
 
 function updateActionState() {
   const hasFolder = Boolean(projectPathEl.value.trim());
-  startBtn.disabled = running || !hasFolder || !hasNode || !hasNpm;
-  validateBtn.disabled = !hasFolder;
-  quickStartBtn.disabled = running;
-  stopBtn.disabled = !running;
-  openBtn.disabled = !currentUrl;
+  startBtn.disabled = busy || running || !hasFolder || !hasNode || !hasNpm;
+  validateBtn.disabled = busy || !hasFolder;
+  quickStartBtn.disabled = busy || running;
+  stopBtn.disabled = busy || !running;
+  openBtn.disabled = busy || !currentUrl;
+  copyUrlBtn.disabled = busy || !currentUrl;
+  pickFolderBtn.disabled = busy;
+  checkPrereqsBtn.disabled = busy;
+  openNodeDownloadBtn.disabled = busy;
 }
 
 function setPrereqChip(el, label, ok, version) {
@@ -64,6 +73,10 @@ function setPrereqs(prereqs) {
   hasNpm = Boolean(prereqs.npmOk);
   setPrereqChip(nodeChipEl, "Node.js", hasNode, prereqs.nodeVersion);
   setPrereqChip(npmChipEl, "npm", hasNpm, prereqs.npmVersion);
+  if (restartBannerEl) {
+    const missing = !hasNode || !hasNpm;
+    restartBannerEl.classList.toggle("hidden", !missing);
+  }
   updateStepGuide();
   updateActionState();
 }
@@ -71,6 +84,11 @@ function setPrereqs(prereqs) {
 function setMessage(msg, isError = false) {
   messageEl.textContent = msg || "";
   messageEl.style.color = isError ? "#b91c1c" : "#334155";
+}
+
+function setBusy(value) {
+  busy = Boolean(value);
+  updateActionState();
 }
 
 function appendLog(text) {
@@ -92,6 +110,21 @@ function setRunningStatus(isRunning, url, projectPath, port) {
 
   updateStepGuide();
   updateActionState();
+}
+
+function setUpdaterStatus(text, ok = null) {
+  if (!updaterChipEl) return;
+  updaterChipEl.textContent = `Updates: ${text}`;
+  if (ok === true) {
+    updaterChipEl.style.background = "#dcfce7";
+    updaterChipEl.style.color = "#166534";
+  } else if (ok === false) {
+    updaterChipEl.style.background = "#fee2e2";
+    updaterChipEl.style.color = "#991b1b";
+  } else {
+    updaterChipEl.style.background = "#eef2ff";
+    updaterChipEl.style.color = "#1e40af";
+  }
 }
 
 async function init() {
@@ -117,6 +150,7 @@ pickFolderBtn.addEventListener("click", async () => {
 });
 
 checkPrereqsBtn.addEventListener("click", async () => {
+  setBusy(true);
   setMessage("Checking prerequisites...");
   const result = await window.runner.checkPrereqs();
   setPrereqs(result);
@@ -125,34 +159,55 @@ checkPrereqsBtn.addEventListener("click", async () => {
   } else {
     setMessage("Node.js/npm missing. Install Node LTS from nodejs.org.", true);
   }
+  setBusy(false);
 });
 
 openNodeDownloadBtn.addEventListener("click", async () => {
-  await window.runner.openNodeDownload();
-  setMessage("Node.js download page opened. Install Node LTS, then click Check Prerequisites.");
+  setBusy(true);
+  setMessage("Preparing Node.js installer...");
+  const result = await window.runner.installNode();
+  if (result?.alreadyInstalled) {
+    setMessage(result.message || "Node.js is already installed.");
+  } else if (result?.canceled) {
+    setMessage(result.message || "Node.js install canceled.");
+  } else if (result?.ok) {
+    setMessage(result.message || "Node.js installer launched.");
+  } else {
+    const fallback = result?.fallbackOpened ? " Opened nodejs.org as fallback." : "";
+    setMessage(`Could not launch installer. ${result?.error || "Unknown error."}${fallback}`, true);
+  }
+  const checked = await window.runner.checkPrereqs();
+  setPrereqs(checked);
+  setBusy(false);
 });
 
 validateBtn.addEventListener("click", async () => {
+  setBusy(true);
   const prereqs = await window.runner.checkPrereqs();
   setPrereqs(prereqs);
   if (!prereqs.nodeOk || !prereqs.npmOk) {
     setMessage("Node.js/npm missing. Install Node LTS first.", true);
+    setBusy(false);
     return;
   }
 
   const result = await window.runner.validate({ projectPath: projectPathEl.value.trim() });
   if (!result.ok) {
     setMessage(result.error || "Validation failed.", true);
+    setBusy(false);
     return;
   }
   setMessage("Validation passed.");
+  setBusy(false);
 });
 
 quickStartBtn.addEventListener("click", async () => {
+  setBusy(true);
   const projectPath = projectPathEl.value.trim();
   const port = Number(portEl.value || "3000");
   if (!projectPath) {
     setMessage("Step 1: Click Choose Folder and select your dashboard app folder.", true);
+    setBusy(false);
     return;
   }
 
@@ -160,12 +215,14 @@ quickStartBtn.addEventListener("click", async () => {
   setPrereqs(prereqs);
   if (!prereqs.nodeOk || !prereqs.npmOk) {
     setMessage("Install Node.js first. Click Install Node.js, finish install, then reopen Runner.", true);
+    setBusy(false);
     return;
   }
 
   const valid = await window.runner.validate({ projectPath });
   if (!valid.ok) {
     setMessage(valid.error || "Selected folder is not valid.", true);
+    setBusy(false);
     return;
   }
 
@@ -173,17 +230,21 @@ quickStartBtn.addEventListener("click", async () => {
   const result = await window.runner.start({ projectPath, port });
   if (!result.ok) {
     setMessage(result.error || "Start failed.", true);
+    setBusy(false);
     return;
   }
   setMessage(`Dashboard started at ${result.url}`);
   await window.runner.openUrl(result.url);
+  setBusy(false);
 });
 
 startBtn.addEventListener("click", async () => {
+  setBusy(true);
   const projectPath = projectPathEl.value.trim();
   const port = Number(portEl.value || "3000");
   if (!projectPath) {
     setMessage("Select a project folder first.", true);
+    setBusy(false);
     return;
   }
 
@@ -191,15 +252,19 @@ startBtn.addEventListener("click", async () => {
   const result = await window.runner.start({ projectPath, port });
   if (!result.ok) {
     setMessage(result.error || "Start failed.", true);
+    setBusy(false);
     return;
   }
   setMessage(`Running at ${result.url}`);
   await window.runner.openUrl(result.url);
+  setBusy(false);
 });
 
 stopBtn.addEventListener("click", async () => {
+  setBusy(true);
   await window.runner.stop();
   setMessage("Stopped.");
+  setBusy(false);
 });
 
 openBtn.addEventListener("click", async () => {
@@ -210,8 +275,33 @@ openBtn.addEventListener("click", async () => {
   await window.runner.openUrl(currentUrl);
 });
 
+copyUrlBtn.addEventListener("click", async () => {
+  const result = await window.runner.copyUrl(currentUrl);
+  if (!result.ok) {
+    setMessage(result.error || "No URL to copy.", true);
+    return;
+  }
+  setMessage("URL copied.");
+});
+
 clearLogsBtn.addEventListener("click", () => {
   logsEl.textContent = "";
+});
+
+checkUpdatesBtn.addEventListener("click", async () => {
+  setBusy(true);
+  setUpdaterStatus("checking...");
+  const result = await window.runner.checkUpdates();
+  if (!result?.ok && result?.error) {
+    setMessage(`Update check failed: ${result.error}`, true);
+    setUpdaterStatus("error", false);
+  } else if (result?.skipped) {
+    setMessage("Update check skipped in development mode.");
+    setUpdaterStatus("dev mode");
+  } else {
+    setMessage("Update check started.");
+  }
+  setBusy(false);
 });
 
 window.runner.onStatus((payload) => {
@@ -221,6 +311,19 @@ window.runner.onStatus((payload) => {
 
 window.runner.onLog((line) => {
   appendLog(line);
+});
+
+window.runner.onUpdater((payload) => {
+  const status = payload?.status || "";
+  if (status === "checking") setUpdaterStatus("checking...");
+  else if (status === "available") setUpdaterStatus(`available (${payload.version || "new"})`);
+  else if (status === "up-to-date") setUpdaterStatus(`up to date (${payload.version || "current"})`, true);
+  else if (status === "downloading") {
+    const pct = Number(payload?.percent || 0);
+    setUpdaterStatus(`downloading ${pct.toFixed(1)}%`);
+  } else if (status === "downloaded") setUpdaterStatus(`ready to install (${payload.version || "new"})`, true);
+  else if (status === "error") setUpdaterStatus("error", false);
+  else if (status === "skipped-dev") setUpdaterStatus("dev mode");
 });
 
 void init();

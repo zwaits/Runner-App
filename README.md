@@ -8,6 +8,7 @@ This app lets a user run your dashboard locally with a simple UI.
 - Runner runs `npm install`.
 - Runner starts the app on chosen port (default `3000`).
 - Runner provides/open the localhost URL.
+- Runner can check/download app updates from GitHub Releases.
 
 ## 1) Build the Runner app (you do this once)
 
@@ -38,19 +39,26 @@ npm run build:win:portable
 
 Installers will be in `dist/`.
 
-## Build Windows installer from GitHub (no local Windows needed)
+## Build installers from GitHub (no local Windows needed)
 
-This repo includes GitHub Actions workflows:
+This repo includes workflows:
 
 - `.github/workflows/build-windows.yml`
 - `.github/workflows/build-macos.yml`
 
-After you push to GitHub:
+### Quick build artifacts (no auto-update publish)
+- Push to `main` (Windows workflow runs).
+- Or run workflow manually in **Actions**.
+- Download artifacts from the run.
 
-1. Open your repo on GitHub.
-2. Go to **Actions**.
-3. Run **Build Windows Installer**.
-4. Download artifact `dashboard-runner-windows` from the run.
+### Publish a release for auto-updates
+1. Create and push a version tag (example):
+   ```bash
+   git tag v1.0.1
+   git push origin v1.0.1
+   ```
+2. GitHub Actions builds installers and publishes release assets automatically.
+3. Installed Runner apps can then receive updates via **Check for Updates**.
 
 ## 2) What you send to another user
 - The Runner installer (`.dmg` for Mac, `.exe` for Windows).
@@ -59,11 +67,17 @@ After you push to GitHub:
 ## 3) What the other user does
 1. Install Runner app.
 2. Open Runner app.
-3. In **Quick Setup**, click **Install Node.js** (only if System Check says missing), then finish Node install.
+3. In **Quick Setup**, click **Install Node.js** (only if System Check says missing). Runner asks permission, then launches the installer.
 4. Click **Choose Folder** and pick your dashboard app folder.
 5. Keep Port = `3000` (or pick another).
 6. Click **Quick Start** (recommended) or **Install + Start**.
 7. Runner auto-opens the dashboard URL.
+8. If needed, use **Copy URL** and paste into browser.
+
+## Auto-update behavior
+- In packaged app mode, Runner checks for updates on launch and every 6 hours.
+- User can also click **Check for Updates** in the Status panel.
+- When an update is downloaded, Runner prompts user to restart and install.
 
 ## Requirements on the user's machine
 - Node.js 20+ installed (includes npm).
@@ -75,3 +89,4 @@ After you push to GitHub:
 - Runner stores last used folder/port.
 - Stop app with **Stop** button.
 - Runner uses `npm run dev` when available, otherwise `npm run start`.
+- If macOS warns the app is from an unidentified developer, right-click app > **Open**.

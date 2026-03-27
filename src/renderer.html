@@ -10,7 +10,7 @@
     <div class="app">
       <header class="topbar">
         <h1>Dashboard Runner</h1>
-        <p>Run your Next.js dashboard locally with one app.</p>
+        <p>Run your dashboard locally with one app. Recommended: use <strong>Quick Start</strong>.</p>
       </header>
 
       <section class="panel">
@@ -59,6 +59,9 @@
           If missing, install Node LTS from
           <a href="https://nodejs.org" target="_blank" rel="noreferrer">nodejs.org</a>.
         </p>
+        <div id="restartBanner" class="restart-banner hidden">
+          <strong>Step 2:</strong> After installing Node.js, close and reopen Dashboard Runner, then click <strong>Check Prerequisites</strong>.
+        </div>
       </section>
 
       <section class="panel actions">
@@ -66,13 +69,18 @@
         <button id="startBtn">Install + Start</button>
         <button id="stopBtn" class="danger">Stop</button>
         <button id="openBtn" class="secondary">Open URL</button>
+        <button id="copyUrlBtn" class="secondary">Copy URL</button>
       </section>
 
       <section class="panel status">
-        <h2>Status</h2>
+        <div class="logs-head">
+          <h2>Status</h2>
+          <button id="checkUpdatesBtn" class="secondary">Check for Updates</button>
+        </div>
         <div class="chips">
           <span id="runningChip" class="chip">Stopped</span>
           <span id="urlChip" class="chip">URL: -</span>
+          <span id="updaterChip" class="chip">Updates: waiting...</span>
         </div>
         <p id="message" class="message"></p>
       </section>
@@ -83,6 +91,16 @@
           <button id="clearLogsBtn" class="secondary">Clear Logs</button>
         </div>
         <pre id="logs"></pre>
+      </section>
+
+      <section class="panel">
+        <h2>Troubleshooting</h2>
+        <ul class="help-list">
+          <li>If macOS blocks opening the app, right-click the app and choose Open.</li>
+          <li>If your dashboard fails to start, confirm you selected the folder containing <code>package.json</code>.</li>
+          <li>If the page is blank, check Runner logs for missing environment files (for example <code>.env</code>).</li>
+          <li>If port 3000 is busy, change Port to 3001 and run Quick Start again.</li>
+        </ul>
       </section>
     </div>
 

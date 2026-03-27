@@ -2,9 +2,14 @@ name: Build macOS Installer
 
 on:
   workflow_dispatch:
+  push:
+    tags: ["v*"]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: write
 
 jobs:
   build-mac:
@@ -23,8 +28,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build macOS installer
+      - name: Build macOS installer (artifacts only)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         run: npm run build:mac -- --publish never
+
+      - name: Build macOS installer (publish release)
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        run: npm run build:mac -- --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v6
@@ -34,4 +46,5 @@ jobs:
             dist/*.dmg
             dist/*.zip
             dist/*.blockmap
+            dist/latest*.yml
           if-no-files-found: warn

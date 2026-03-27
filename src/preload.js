@@ -8,7 +8,11 @@ contextBridge.exposeInMainWorld("runner", {
   start: (payload) => ipcRenderer.invoke("runner:start", payload),
   stop: () => ipcRenderer.invoke("runner:stop"),
   openUrl: (url) => ipcRenderer.invoke("runner:open-url", url),
+  copyUrl: (url) => ipcRenderer.invoke("runner:copy-url", url),
   openNodeDownload: () => ipcRenderer.invoke("runner:open-node-download"),
+  installNode: () => ipcRenderer.invoke("runner:install-node"),
+  checkUpdates: () => ipcRenderer.invoke("runner:check-updates"),
   onStatus: (cb) => ipcRenderer.on("runner:status", (_e, payload) => cb(payload)),
-  onLog: (cb) => ipcRenderer.on("runner:log", (_e, line) => cb(line))
+  onLog: (cb) => ipcRenderer.on("runner:log", (_e, line) => cb(line)),
+  onUpdater: (cb) => ipcRenderer.on("runner:updater", (_e, payload) => cb(payload))
 });

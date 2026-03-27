@@ -30,15 +30,29 @@
       "output": "dist"
     },
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "category": "public.app-category.productivity"
     },
     "win": {
-      "target": ["nsis", "zip"]
+      "target": [
+        "nsis",
+        "zip"
+      ]
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "zwaits",
+      "repo": "Runner-App"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
   }
 }
