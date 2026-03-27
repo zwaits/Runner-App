@@ -79,21 +79,16 @@ This repo includes workflows:
 - User can also click **Check for Updates** in the Status panel.
 - When an update is downloaded, Runner prompts user to restart and install.
 
-## Verified release setup (macOS + Windows)
+## Free distribution mode (no paid certificates)
 
-To get verified installs (no malware warning prompt), release builds must be signed:
+This project currently builds unsigned installers by default.
 
-- macOS signing + notarization secrets:
-  - `MAC_CSC_LINK` (base64 `.p12` Developer ID Application certificate)
-  - `MAC_CSC_KEY_PASSWORD`
-  - `APPLE_API_KEY` (contents of App Store Connect API `.p8`)
-  - `APPLE_API_KEY_ID`
-  - `APPLE_API_ISSUER`
-- Windows signing secrets:
-  - `WIN_CSC_LINK` (base64 `.pfx` code-sign certificate)
-  - `WIN_CSC_KEY_PASSWORD`
+- macOS users may see an Apple verification warning on first open.
+  - Open with right-click > **Open** once.
+- Windows users may see SmartScreen warnings.
+  - Click **More info** > **Run anyway** if needed.
 
-Release tag builds (`v*`) fail if these secrets are missing.
+Tag builds (`v*`) still publish release assets for auto-update feeds.
 
 ## Requirements on the user's machine
 - Node.js 20+ installed (includes npm).

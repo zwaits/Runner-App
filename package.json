@@ -15,14 +15,12 @@
     "build:win:portable": "electron-builder --win portable --x64"
   },
   "devDependencies": {
-    "@electron/notarize": "^3.1.0",
     "electron": "^31.6.0",
     "electron-builder": "^24.13.3"
   },
   "build": {
     "appId": "com.lawyer.dashboardrunner",
     "productName": "Dashboard Runner",
-    "afterSign": "scripts/after-sign.js",
     "directories": {
       "buildResources": "src/assets",
       "output": "dist"
@@ -32,10 +30,8 @@
         "dmg"
       ],
       "category": "public.app-category.productivity",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": true,
-      "entitlements": "scripts/entitlements.mac.plist",
-      "entitlementsInherit": "scripts/entitlements.mac.plist"
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
     },
     "win": {
       "target": [
