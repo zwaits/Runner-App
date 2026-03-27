@@ -149,91 +149,108 @@ pickFolderBtn.addEventListener("click", async () => {
 
 checkPrereqsBtn.addEventListener("click", async () => {
   setBusy(true);
-  setMessage("Checking prerequisites...");
-  const result = await window.runner.checkPrereqs();
-  setPrereqs(result);
-  if (result.nodeOk && result.npmOk) {
-    setMessage("System check passed.");
-  } else {
-    setMessage("Node.js/npm missing. Install Node LTS from nodejs.org.", true);
+  try {
+    setMessage("Checking prerequisites...");
+    const result = await window.runner.checkPrereqs();
+    setPrereqs(result);
+    if (result.nodeOk && result.npmOk) {
+      setMessage("System check passed.");
+    } else {
+      setMessage("Node.js/npm missing. Install Node LTS from nodejs.org.", true);
+    }
+  } catch (error) {
+    setMessage(`System check failed: ${error?.message || "Unknown error"}`, true);
+  } finally {
+    setBusy(false);
   }
-  setBusy(false);
 });
 
 openNodeDownloadBtn.addEventListener("click", async () => {
   setBusy(true);
-  setMessage("Preparing Node.js installer...");
-  const result = await window.runner.installNode();
-  if (result?.alreadyInstalled) {
-    setMessage(result.message || "Node.js is already installed.");
-  } else if (result?.canceled) {
-    setMessage(result.message || "Node.js install canceled.");
-  } else if (result?.ok) {
-    setMessage(result.message || "Node.js installer launched.");
-  } else {
-    const fallback = result?.fallbackOpened ? " Opened nodejs.org as fallback." : "";
-    setMessage(`Could not launch installer. ${result?.error || "Unknown error."}${fallback}`, true);
+  try {
+    setMessage("Preparing Node.js installer...");
+    const result = await window.runner.installNode();
+    if (result?.alreadyInstalled) {
+      setMessage(result.message || "Node.js is already installed.");
+    } else if (result?.canceled) {
+      setMessage(result.message || "Node.js install canceled.");
+    } else if (result?.ok) {
+      setMessage(result.message || "Node.js installer launched.");
+    } else {
+      const fallback = result?.fallbackOpened ? " Opened nodejs.org as fallback." : "";
+      setMessage(`Could not launch installer. ${result?.error || "Unknown error."}${fallback}`, true);
+    }
+    const checked = await window.runner.checkPrereqs();
+    setPrereqs(checked);
+  } catch (error) {
+    setMessage(`Install launcher failed: ${error?.message || "Unknown error"}`, true);
+  } finally {
+    setBusy(false);
   }
-  const checked = await window.runner.checkPrereqs();
-  setPrereqs(checked);
-  setBusy(false);
 });
 
 validateBtn.addEventListener("click", async () => {
   setBusy(true);
-  const prereqs = await window.runner.checkPrereqs();
-  setPrereqs(prereqs);
-  if (!prereqs.nodeOk || !prereqs.npmOk) {
-    setMessage("Node.js/npm missing. Install Node LTS first.", true);
-    setBusy(false);
-    return;
-  }
+  try {
+    const prereqs = await window.runner.checkPrereqs();
+    setPrereqs(prereqs);
+    if (!prereqs.nodeOk || !prereqs.npmOk) {
+      setMessage("Node.js/npm missing. Install Node LTS first.", true);
+      return;
+    }
 
-  const result = await window.runner.validate({ projectPath: projectPathEl.value.trim() });
-  if (!result.ok) {
-    setMessage(result.error || "Validation failed.", true);
+    const result = await window.runner.validate({ projectPath: projectPathEl.value.trim() });
+    if (!result.ok) {
+      setMessage(result.error || "Validation failed.", true);
+      return;
+    }
+    setMessage("Validation passed.");
+  } catch (error) {
+    setMessage(`Validation failed: ${error?.message || "Unknown error"}`, true);
+  } finally {
     setBusy(false);
-    return;
   }
-  setMessage("Validation passed.");
-  setBusy(false);
 });
 
 quickStartBtn.addEventListener("click", async () => {
   setBusy(true);
-  const projectPath = projectPathEl.value.trim();
-  const port = Number(portEl.value || "3000");
-  if (!projectPath) {
-    setMessage("Step 1: Click Choose Folder and select your dashboard app folder.", true);
-    setBusy(false);
-    return;
-  }
+  try {
+    const projectPath = projectPathEl.value.trim();
+    const port = Number(portEl.value || "3000");
+    if (!projectPath) {
+      setMessage("Step 1: Click Choose Folder and select your dashboard app folder.", true);
+      return;
+    }
 
-  const prereqs = await window.runner.checkPrereqs();
-  setPrereqs(prereqs);
-  if (!prereqs.nodeOk || !prereqs.npmOk) {
-    setMessage("Install Node.js first. Click Install Node.js, finish install, then reopen Runner.", true);
-    setBusy(false);
-    return;
-  }
+    const prereqs = await window.runner.checkPrereqs();
+    setPrereqs(prereqs);
+    if (!prereqs.nodeOk || !prereqs.npmOk) {
+      setMessage("Install Node.js first. Click Install Node.js, finish install, then reopen Runner.", true);
+      return;
+    }
 
-  const valid = await window.runner.validate({ projectPath });
-  if (!valid.ok) {
-    setMessage(valid.error || "Selected folder is not valid.", true);
-    setBusy(false);
-    return;
-  }
+    const valid = await window.runner.validate({ projectPath });
+    if (!valid.ok) {
+      setMessage(valid.error || "Selected folder is not valid.", true);
+      return;
+    }
 
-  setMessage("Installing packages and starting dashboard...");
-  const result = await window.runner.start({ projectPath, port });
-  if (!result.ok) {
-    setMessage(result.error || "Start failed.", true);
+    setMessage("Quick Start running: install dependencies, start app, then open browser...");
+    const result = await window.runner.start({ projectPath, port });
+    if (!result.ok) {
+      setMessage(result.error || "Start failed.", true);
+      return;
+    }
+    setMessage(`Dashboard started at ${result.url}`);
+    const opened = await window.runner.openUrl(result.url);
+    if (!opened?.ok) {
+      setMessage(`Started at ${result.url} (open URL failed: ${opened?.error || "Unknown error"})`, true);
+    }
+  } catch (error) {
+    setMessage(`Quick Start failed: ${error?.message || "Unknown error"}`, true);
+  } finally {
     setBusy(false);
-    return;
   }
-  setMessage(`Dashboard started at ${result.url}`);
-  await window.runner.openUrl(result.url);
-  setBusy(false);
 });
 
 startBtn.addEventListener("click", async () => {

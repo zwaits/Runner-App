@@ -105,6 +105,17 @@ async function resolveCommand(binaryName) {
   return binaryName;
 }
 
+async function probeCommands(candidates, args) {
+  for (const candidate of candidates) {
+    const resolved = await resolveCommand(candidate);
+    const result = await runSimpleCommand(resolved, args);
+    if (result.ok) {
+      return { command: resolved, result };
+    }
+  }
+  return { command: candidates[0], result: { ok: false, out: "", err: "" } };
+}
+
 function fetchText(url) {
   return new Promise((resolve, reject) => {
     const request = https.get(url, (res) => {
@@ -324,10 +335,17 @@ async function checkForAppUpdates(manual = false) {
 }
 
 async function checkPrerequisites() {
-  resolvedNodeCommand = await resolveCommand(isWindows() ? "node.exe" : "node");
-  resolvedNpmCommand = await resolveCommand(isWindows() ? "npm.cmd" : "npm");
-  const node = await runSimpleCommand(resolvedNodeCommand, ["-v"]);
-  const npm = await runSimpleCommand(resolvedNpmCommand, ["-v"]);
+  const nodeCandidates = isWindows() ? ["node", "node.exe"] : ["node"];
+  const npmCandidates = isWindows() ? ["npm", "npm.cmd", "npm.exe"] : ["npm"];
+
+  const nodeProbe = await probeCommands(nodeCandidates, ["-v"]);
+  const npmProbe = await probeCommands(npmCandidates, ["-v"]);
+
+  resolvedNodeCommand = nodeProbe.command;
+  resolvedNpmCommand = npmProbe.command;
+
+  const node = nodeProbe.result;
+  const npm = npmProbe.result;
   prereqStatus = {
     nodeOk: node.ok,
     npmOk: npm.ok,
