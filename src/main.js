@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell, clipboard } = require("elect
 const path = require("path");
 const fs = require("fs");
 const { spawn } = require("child_process");
+const http = require("http");
 const https = require("https");
 let autoUpdater = null;
 try {
@@ -182,6 +183,25 @@ function downloadToFile(url, destination) {
     file.on("error", (err) => {
       request.destroy(err);
     });
+  });
+}
+
+function canReachUrl(url) {
+  return new Promise((resolve) => {
+    try {
+      const lib = url.startsWith("https:") ? https : http;
+      const req = lib.get(url, (res) => {
+        res.resume();
+        resolve(Boolean(res.statusCode && res.statusCode < 500));
+      });
+      req.on("error", () => resolve(false));
+      req.setTimeout(1500, () => {
+        req.destroy();
+        resolve(false);
+      });
+    } catch {
+      resolve(false);
+    }
   });
 }
 
@@ -468,38 +488,94 @@ async function startProject({ projectPath, port }) {
   });
 
   currentUrl = `http://localhost:${currentPort}`;
+  sendLog(`\n==> Waiting for dashboard to become available at ${currentUrl}\n`);
 
-  appProcess.stdout.on("data", (d) => {
-    const text = d.toString();
-    sendLog(text);
-    if (text.includes("ready") || text.includes("started") || text.includes("Local:")) {
-      sendStatus({ running: true, url: currentUrl, port: currentPort, projectPath: currentProjectPath });
-    }
+  return await new Promise((resolve) => {
+    let settled = false;
+    let sawReadySignal = false;
+    let pollTimer = null;
+    let timeoutTimer = null;
+
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      if (pollTimer) clearInterval(pollTimer);
+      if (timeoutTimer) clearTimeout(timeoutTimer);
+      resolve(result);
+    };
+
+    const markRunning = () => {
+      sendStatus({
+        running: true,
+        url: currentUrl,
+        port: currentPort,
+        projectPath: currentProjectPath,
+        script: currentScript
+      });
+      finish({ ok: true, url: currentUrl });
+    };
+
+    const checkReady = async () => {
+      if (!appProcess || settled) return;
+      const reachable = await canReachUrl(currentUrl);
+      if (reachable) {
+        sendLog(`==> Dashboard reachable at ${currentUrl}\n`);
+        markRunning();
+      }
+    };
+
+    appProcess.stdout.on("data", (d) => {
+      const text = d.toString();
+      sendLog(text);
+      if (text.includes("ready") || text.includes("started") || text.includes("Local:")) {
+        sawReadySignal = true;
+        void checkReady();
+      }
+    });
+
+    appProcess.stderr.on("data", (d) => {
+      const text = d.toString();
+      sendLog(text);
+      if (/EADDRINUSE|address already in use/i.test(text)) {
+        finish({ ok: false, error: `Port ${currentPort} is already in use.` });
+      }
+    });
+
+    appProcess.on("error", (err) => {
+      sendLog(`Process error: ${err.message}`);
+      appProcess = null;
+      sendStatus({ running: false, url: "", port: currentPort, projectPath: currentProjectPath });
+      finish({ ok: false, error: err.message });
+    });
+
+    appProcess.on("close", (code) => {
+      sendLog(`\nProcess exited with code ${code}`);
+      appProcess = null;
+      currentUrl = "";
+      sendStatus({ running: false, url: "", port: currentPort, projectPath: currentProjectPath });
+      if (!settled) {
+        finish({
+          ok: false,
+          error: sawReadySignal
+            ? `Dashboard stopped before Runner could finish startup verification (exit code ${code}).`
+            : `Dashboard failed to start (exit code ${code}).`
+        });
+      }
+    });
+
+    pollTimer = setInterval(() => {
+      void checkReady();
+    }, 1500);
+
+    timeoutTimer = setTimeout(() => {
+      finish({
+        ok: false,
+        error: `Dashboard did not become available within 120 seconds on port ${currentPort}.`
+      });
+    }, 120000);
+
+    void checkReady();
   });
-
-  appProcess.stderr.on("data", (d) => sendLog(d.toString()));
-
-  appProcess.on("error", (err) => {
-    sendLog(`Process error: ${err.message}`);
-    appProcess = null;
-    sendStatus({ running: false, url: "", port: currentPort, projectPath: currentProjectPath });
-  });
-
-  appProcess.on("close", (code) => {
-    sendLog(`\nProcess exited with code ${code}`);
-    appProcess = null;
-    currentUrl = "";
-    sendStatus({ running: false, url: "", port: currentPort, projectPath: currentProjectPath });
-  });
-
-  sendStatus({
-    running: true,
-    url: currentUrl,
-    port: currentPort,
-    projectPath: currentProjectPath,
-    script: currentScript
-  });
-  return { ok: true, url: currentUrl };
 }
 
 app.whenReady().then(() => {

@@ -126,12 +126,16 @@ function setUpdaterStatus(text, ok = null) {
 }
 
 async function init() {
-  const state = await window.runner.getState();
-  setRunningStatus(state.running, state.url, state.projectPath, state.port);
-  setPrereqs(state.prereqs);
-  if (!state.prereqs?.nodeOk || !state.prereqs?.npmOk) {
-    const checked = await window.runner.checkPrereqs();
-    setPrereqs(checked);
+  try {
+    const state = await window.runner.getState();
+    setRunningStatus(state.running, state.url, state.projectPath, state.port);
+    setPrereqs(state.prereqs);
+    if (!state.prereqs?.nodeOk || !state.prereqs?.npmOk) {
+      const checked = await window.runner.checkPrereqs();
+      setPrereqs(checked);
+    }
+  } catch (error) {
+    setMessage(`Initialization failed: ${error?.message || "Unknown error"}`, true);
   }
 }
 
@@ -255,39 +259,57 @@ quickStartBtn.addEventListener("click", async () => {
 
 startBtn.addEventListener("click", async () => {
   setBusy(true);
-  const projectPath = projectPathEl.value.trim();
-  const port = Number(portEl.value || "3000");
-  if (!projectPath) {
-    setMessage("Select a project folder first.", true);
-    setBusy(false);
-    return;
-  }
+  try {
+    const projectPath = projectPathEl.value.trim();
+    const port = Number(portEl.value || "3000");
+    if (!projectPath) {
+      setMessage("Select a project folder first.", true);
+      return;
+    }
 
-  setMessage("Starting app...");
-  const result = await window.runner.start({ projectPath, port });
-  if (!result.ok) {
-    setMessage(result.error || "Start failed.", true);
+    setMessage("Starting app...");
+    const result = await window.runner.start({ projectPath, port });
+    if (!result.ok) {
+      setMessage(result.error || "Start failed.", true);
+      return;
+    }
+    setMessage(`Running at ${result.url}`);
+    const opened = await window.runner.openUrl(result.url);
+    if (!opened?.ok) {
+      setMessage(`Running at ${result.url} (open URL failed: ${opened?.error || "Unknown error"})`, true);
+    }
+  } catch (error) {
+    setMessage(`Start failed: ${error?.message || "Unknown error"}`, true);
+  } finally {
     setBusy(false);
-    return;
   }
-  setMessage(`Running at ${result.url}`);
-  await window.runner.openUrl(result.url);
-  setBusy(false);
 });
 
 stopBtn.addEventListener("click", async () => {
   setBusy(true);
-  await window.runner.stop();
-  setMessage("Stopped.");
-  setBusy(false);
+  try {
+    await window.runner.stop();
+    setMessage("Stopped.");
+  } catch (error) {
+    setMessage(`Stop failed: ${error?.message || "Unknown error"}`, true);
+  } finally {
+    setBusy(false);
+  }
 });
 
 openBtn.addEventListener("click", async () => {
-  if (!currentUrl) {
-    setMessage("No URL to open.", true);
-    return;
+  try {
+    if (!currentUrl) {
+      setMessage("No URL to open.", true);
+      return;
+    }
+    const result = await window.runner.openUrl(currentUrl);
+    if (!result?.ok) {
+      setMessage(result?.error || "Open URL failed.", true);
+    }
+  } catch (error) {
+    setMessage(`Open URL failed: ${error?.message || "Unknown error"}`, true);
   }
-  await window.runner.openUrl(currentUrl);
 });
 
 copyUrlBtn.addEventListener("click", async () => {

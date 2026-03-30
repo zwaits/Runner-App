@@ -31,7 +31,8 @@
       ],
       "category": "public.app-category.productivity",
       "hardenedRuntime": false,
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "identity": "-"
     },
     "win": {
       "target": [
@@ -46,7 +47,8 @@
       "provider": "github",
       "owner": "zwaits",
       "repo": "Runner-App"
-    }
+    },
+    "forceCodeSigning": false
   },
   "dependencies": {
     "electron-updater": "^6.3.9"
