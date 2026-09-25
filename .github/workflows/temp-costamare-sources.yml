@@ -26,7 +26,7 @@ jobs:
           fetch '01_CMRE_2024_Annual_Report.pdf' 'https://www.costamare.com/images/annual_reports/2024_annual_report.pdf'
           fetch '02_CMRE_Q1_2025_Earnings_Release.pdf' 'https://www.costamare.com/images/news/CMRE_Earnings_release_Q1_2025.pdf'
           fetch '03_CMDB_April_2025_Investor_Presentation.pdf' 'https://www.costamare.com/images/news/Costamare_Bulkers_Holdings_Limited_Investor_Presentation.pdf'
-          fetch '04_CMDB_May_2025_Separation_Completion.pdf' 'https://www.costamarebulkers.com/images/news/20250507_CMDB_Listing_.pdf'
+          fetch '04_CMDB_April_2025_Analyst_and_Investor_Day.pdf' 'https://www.costamarebulkers.com/images/news/Costamare_Bulkers_Analyst_and_Investor_Day.pdf'
           fetch '05_CMRE_Q2_2025_Earnings_Release.pdf' 'https://www.costamare.com/images/news/CMRE_Earnings_release_Q2_2025.pdf'
           fetch '06_CMRE_Q2_2025_Earnings_Presentation.pdf' 'https://www.costamare.com/images/presentations/CMRE_Presentation_Q2_2025.pdf'
           fetch '07_CMDB_H1_2025_Earnings_Release.pdf' 'https://www.costamarebulkers.com/images/news/CMDB_Earnings_release_H1_2025.pdf'
