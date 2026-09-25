@@ -8,7 +8,7 @@ jobs:
   bundle:
     runs-on: ubuntu-latest
     steps:
-      - name: Download untouched SEC source files
+      - name: Download full official issuer source PDFs
         shell: bash
         run: |
           set -euo pipefail
@@ -18,32 +18,33 @@ jobs:
             local name="$1"
             local url="$2"
             echo "Downloading $name"
-            curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 --max-time 180 -A "$UA" "$url" -o "sources/$name"
+            curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 --max-time 240 -A "$UA" "$url" -o "sources/$name"
             test -s "sources/$name"
-            sleep 0.3
+            test "$(head -c 4 "sources/$name")" = "%PDF"
+            sleep 0.2
           }
-          fetch '01_CMRE_2024_20-F.htm' 'https://www.sec.gov/Archives/edgar/data/1503584/000114036125005199/form20f.htm'
-          fetch '02_CMRE_Q1_2025_Earnings_Release.htm' 'https://www.sec.gov/Archives/edgar/data/1503584/000117184325002939/exh_991.htm'
-          fetch '03_CMRE_Q1_2025_Financial_Report.htm' 'https://www.sec.gov/Archives/edgar/data/1503584/000117184325002939/exh_992.htm'
-          fetch '04_CMDB_H1_2025_Earnings_Release.htm' 'https://www.sec.gov/Archives/edgar/data/2033535/000117184325005203/exh_991.htm'
-          fetch '05_CMDB_H1_2025_Financial_Report.htm' 'https://www.sec.gov/Archives/edgar/data/2033535/000117184325005203/exh_992.htm'
-          fetch '06_CMRE_Q2_2025_Earnings_Release.htm' 'https://www.sec.gov/Archives/edgar/data/1503584/000117184325004873/exh_991.htm'
-          fetch '07_CMRE_Q2_2025_Financial_Report.htm' 'https://www.sec.gov/Archives/edgar/data/1503584/000117184325004873/exh_992.htm'
-          fetch '08_CMRE_Q3_2025_Earnings_Release.htm' 'https://www.sec.gov/Archives/edgar/data/1503584/000117184325006940/exh_991.htm'
-          fetch '09_CMRE_Q3_2025_Financial_Report.htm' 'https://www.sec.gov/Archives/edgar/data/1503584/000117184325006940/exh_992.htm'
-          fetch '10_CMRE_FY2025_Earnings_Release.htm' 'https://www.sec.gov/Archives/edgar/data/1503584/000117184326000875/exh_991.htm'
-          fetch '11_CMRE_FY2025_Financial_Report.htm' 'https://www.sec.gov/Archives/edgar/data/1503584/000117184326000875/exh_992.htm'
-          fetch '12_CMRE_2025_20-F.htm' 'https://www.sec.gov/Archives/edgar/data/1503584/000114036126007868/ef20064083_20f.htm'
-          fetch '13_CMDB_FY2025_Earnings_Release.htm' 'https://www.sec.gov/Archives/edgar/data/2033535/000117184326000957/exh_991.htm'
-          fetch '14_CMDB_FY2025_Financial_Report.htm' 'https://www.sec.gov/Archives/edgar/data/2033535/000117184326000957/exh_992.htm'
-          fetch '15_CMDB_2025_20-F.htm' 'https://www.sec.gov/Archives/edgar/data/2033535/000114036126011994/ef20066084_20f.htm'
-          fetch '16_CMRE_Q1_2026_Earnings_Release.htm' 'https://www.sec.gov/Archives/edgar/data/1503584/000117184326002794/exh_991.htm'
-          fetch '17_CMRE_Q1_2026_Financial_Report.htm' 'https://www.sec.gov/Archives/edgar/data/1503584/000117184326002794/exh_992.htm'
-          fetch '18_CMRE_Q2_2026_Earnings_Release.htm' 'https://www.sec.gov/Archives/edgar/data/1503584/000117184326004877/exh_991.htm'
-          fetch '19_CMRE_Q2_2026_Financial_Report.htm' 'https://www.sec.gov/Archives/edgar/data/1503584/000117184326004877/exh_992.htm'
-          fetch '20_CMDB_Q2_2026_Earnings_Release.htm' 'https://www.sec.gov/Archives/edgar/data/2033535/000117184326005131/exh_991.htm'
-          count=$(find sources -maxdepth 1 -type f | wc -l | tr -d ' ')
-          echo "Downloaded $count source files"
+          fetch '01_CMRE_2024_Annual_Report.pdf' 'https://www.costamare.com/images/annual_reports/2024_annual_report.pdf'
+          fetch '02_CMRE_Q1_2025_Earnings_Release.pdf' 'https://www.costamare.com/images/news/CMRE_Earnings_release_Q1_2025.pdf'
+          fetch '03_CMDB_April_2025_Investor_Presentation.pdf' 'https://www.costamare.com/images/news/Costamare_Bulkers_Holdings_Limited_Investor_Presentation.pdf'
+          fetch '04_CMDB_May_2025_Separation_Completion.pdf' 'https://www.costamarebulkers.com/images/news/20250507_CMDB_Listing_.pdf'
+          fetch '05_CMRE_Q2_2025_Earnings_Release.pdf' 'https://www.costamare.com/images/news/CMRE_Earnings_release_Q2_2025.pdf'
+          fetch '06_CMRE_Q2_2025_Earnings_Presentation.pdf' 'https://www.costamare.com/images/presentations/CMRE_Presentation_Q2_2025.pdf'
+          fetch '07_CMDB_H1_2025_Earnings_Release.pdf' 'https://www.costamarebulkers.com/images/news/CMDB_Earnings_release_H1_2025.pdf'
+          fetch '08_CMRE_Q3_2025_Earnings_Release.pdf' 'https://www.costamare.com/images/news/CMRE_Q3_2025_Earnings_release.pdf'
+          fetch '09_CMRE_Q3_2025_Earnings_Presentation.pdf' 'https://www.costamare.com/images/presentations/CMRE_Presentation_Q3_2025.pdf'
+          fetch '10_CMRE_FY2025_Earnings_Release.pdf' 'https://www.costamare.com/images/news/CMRE_Q4_2025_Earnings_release.pdf'
+          fetch '11_CMRE_Q4_2025_Earnings_Presentation.pdf' 'https://www.costamare.com/images/presentations/CMRE_Presentation_Q4_2025.pdf'
+          fetch '12_CMRE_2025_Annual_Report.pdf' 'https://www.costamare.com/images/annual_reports/cmre_2025_20-F.pdf'
+          fetch '13_CMDB_FY2025_Earnings_Release.pdf' 'https://www.costamarebulkers.com/images/news/CMDB_Q425_Earnings_Release.pdf'
+          fetch '14_CMDB_2025_Annual_Report.pdf' 'https://www.costamarebulkers.com/images/annual_reports/Costamare_Bulkers_Holdings_Limited_20F_Form_2025.pdf'
+          fetch '15_CMRE_Q1_2026_Earnings_Release.pdf' 'https://www.costamare.com/images/news/CMRE_Q1_2026_Earnings_release.pdf'
+          fetch '16_CMRE_Q1_2026_Earnings_Presentation.pdf' 'https://www.costamare.com/images/presentations/CMRE_Presentation_Q1_2026.pdf'
+          fetch '17_CMRE_Q2_2026_Earnings_Release.pdf' 'https://www.costamare.com/images/news/CMRE_Q2_2026_Earnings_release.pdf'
+          fetch '18_CMRE_Q2_2026_Earnings_Presentation.pdf' 'https://www.costamare.com/images/presentations/CMRE_Presentation_Q2_2026.pdf'
+          fetch '19_CMDB_Q2_2026_Earnings_Release.pdf' 'https://www.costamarebulkers.com/images/news/CMDB_Q2_2026_Earnings_Release.pdf'
+          fetch '20_CMDB_Q2_2026_Earnings_Presentation.pdf' 'https://www.costamarebulkers.com/images/news/CMDB_Presentation_Q2_2026.pdf'
+          count=$(find sources -maxdepth 1 -type f -name '*.pdf' | wc -l | tr -d ' ')
+          echo "Downloaded $count full source PDFs"
           test "$count" = "20"
           find sources -maxdepth 1 -type f -printf '%f %s bytes\n' | sort
 
@@ -51,7 +52,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Costamare_20_Official_Full_Sources
-          path: sources/*
+          path: sources/*.pdf
           if-no-files-found: error
           compression-level: 6
           retention-days: 1
