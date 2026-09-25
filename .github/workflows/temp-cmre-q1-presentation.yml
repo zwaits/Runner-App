@@ -1,0 +1,26 @@
+name: Temp CMRE Q1 2025 Presentation
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download official CMRE Q1 2025 presentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 --max-time 180 \
+            'https://www.costamare.com/images/presentations/CMRE_Presentation_Q1_2025.pdf' \
+            -o CMRE_Presentation_Q1_2025.pdf
+          test -s CMRE_Presentation_Q1_2025.pdf
+          test "$(head -c 4 CMRE_Presentation_Q1_2025.pdf)" = "%PDF"
+      - name: Upload PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: CMRE_Presentation_Q1_2025
+          path: CMRE_Presentation_Q1_2025.pdf
+          if-no-files-found: error
+          retention-days: 1
