@@ -1,55 +1,66 @@
-name: Temp AerCap Source Discovery
+name: Temp AerCap Official Source Bundle
 
 on:
   pull_request:
     branches: [main]
 
 jobs:
-  discover:
+  bundle:
     runs-on: ubuntu-latest
     steps:
-      - name: Discover official AerCap PDF links
+      - name: Download 20 full official AerCap source PDFs
         shell: bash
         run: |
-          python -m pip install --quiet beautifulsoup4 requests
-          python - <<'PY'
-          import requests
-          from bs4 import BeautifulSoup, Tag
-          from urllib.parse import urljoin
+          set -euo pipefail
+          mkdir -p sources
+          UA='Mozilla/5.0 (compatible; AerCap-source-bundle/1.0)'
+          fetch() {
+            local name="$1"
+            local url="$2"
+            echo "Downloading $name"
+            curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 --max-time 240 -A "$UA" "$url" -o "sources/$name"
+            test -s "sources/$name"
+            test "$(head -c 4 "sources/$name")" = "%PDF"
+            sleep 0.2
+          }
 
-          url='https://www.aercap.com/investors/financial-information'
-          r=requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=60)
-          r.raise_for_status()
-          soup=BeautifulSoup(r.text,'html.parser')
-          targets={'FY 2024','Q1 2025','Q2 2025','Q3 2025','FY 2025','Q1 2026','Q2 2026'}
-          seen_titles=set()
-          for h in soup.find_all(['h2','h3','h4']):
-              title=' '.join(h.stripped_strings)
-              if title not in targets or title in seen_titles:
-                  continue
-              seen_titles.add(title)
-              print('\n###', title)
-              chosen=None
-              for anc in h.parents:
-                  if not isinstance(anc, Tag):
-                      continue
-                  links=[a for a in anc.find_all('a', href=True) if '.pdf' in a.get('href','').lower()]
-                  headings=[' '.join(x.stripped_strings) for x in anc.find_all(['h2','h3','h4'])]
-                  target_count=sum(1 for x in headings if x in targets)
-                  if len(links)>=2 and target_count==1:
-                      chosen=anc
-                      break
-              if chosen is None:
-                  chosen=h.parent
-              seen=set()
-              for a in chosen.find_all('a', href=True):
-                  href=urljoin(url,a['href'])
-                  if '.pdf' not in href.lower():
-                      continue
-                  text=' '.join(a.stripped_strings)
-                  key=(text,href)
-                  if key in seen:
-                      continue
-                  seen.add(key)
-                  print(repr(text), '=>', href)
-          PY
+          fetch 'AER-12.31.2024-20F.pdf' 'https://www.aercap.com/investors/shareholder-services/sec-filings/content/0001378789-25-000007/0001378789-25-000007.pdf'
+          fetch '4Q 2024 AerCap Holdings N.V. Earnings Presentation.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/539/13836/earnings_presentation/4Q+2024+AerCap+Holdings+N.V.+Earnings+Presentation.pdf'
+
+          fetch 'AerCap 2025 First Quarter Earnings Release Final.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/539/14111/earnings_release/AerCap+2025+First+Quarter+Earnings+Release+Final.pdf'
+          fetch '1Q 2025 AerCap Holdings N.V. Earnings Presentation Final.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/539/14111/earnings_presentation/1Q+2025+AerCap+Holdings+N.V.+Earnings+Presentation+Final.pdf'
+          fetch 'AerCap Holdings N.V. 6-K Interim Financial Report for First Quarter 2025.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/540/14458/file/AerCap+Holdings+N.V.+6-K+Interim+Financial+Report+for+First+Quarter+2025.pdf'
+
+          fetch 'AerCap 2025 Second Quarter Earnings Release.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/539/14490/earnings_release/AerCap+2025+Second+Quarter+Earnings+Release.pdf'
+          fetch '2Q 2025 AerCap Holdings N.V. Earnings Presentation.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/539/14490/earnings_presentation/2Q+2025+AerCap+Holdings+N.V.+Earnings+Presentation.pdf'
+          fetch 'AerCap Holdings N.V. Filing of Interim Financial Report for the Second Quarter of 2025.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/540/14518/file/AerCap+Holdings+N.V.+Filing+of+Interim+Financial+Report+for+the+Second+Quarter+of+2025.pdf'
+
+          fetch 'AerCap 2025 Third Quarter Earnings Release.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/539/14536/earnings_release/AerCap+2025+Third+Quarter+Earnings+Release.pdf'
+          fetch '3Q 2025 AerCap Holdings N.V. Earnings Presentation.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/539/14536/earnings_presentation/3Q+2025+AerCap+Holdings+N.V.+Earnings+Presentation.pdf'
+          fetch 'AerCap Holdings N.V. Filing of Interim Financial Report for the Third Quarter of 2025.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/540/14570/file/AerCap+Holdings+N.V.+Filing+of+Interim+Financial+Report+for+the+Third+Quarter+of+2025.pdf'
+
+          fetch 'AerCap 2025 Fourth Quarter Earnings Release.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/539/14594/earnings_release/AerCap+2025+Fourth+Quarter+Earnings+Release.pdf'
+          fetch '4Q 2025 AerCap Holdings N.V. Earnings Presentation.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/539/14594/earnings_presentation/4Q+2025+AerCap+Holdings+N.V.+Earnings+Presentation.pdf'
+          fetch 'AER-12.31.2025-20F.pdf' 'https://www.aercap.com/investors/shareholder-services/sec-filings/content/0001628280-26-007513/0001628280-26-007513.pdf'
+
+          fetch 'AerCap 2026 First Quarter Earnings Release.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/539/14683/earnings_release/AerCap+2026+First+Quarter+Earnings+Release.pdf'
+          fetch '1Q 2026 AerCap Holdings N.V. Earnings Presentation.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/539/14683/earnings_presentation/1Q+2026+AerCap+Holdings+N.V.+Earnings+Presentation.pdf'
+          fetch 'AerCap Holdings N.V. Interim Report for 1Q 2026.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/540/14862/file/AerCap+Holdings+N.V.+Interim+Report+for+1Q+2026.pdf'
+
+          fetch 'AerCap 2026 Second Quarter Earnings Release.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/539/14888/earnings_release/AerCap+2026+Second+Quarter+Earnings+Release.pdf'
+          fetch '2Q 2026 AerCap Holdings N.V. Earnings Presentation.pdf' 'https://www.aercap.com/_assets/_ba7b1252fe9802aff093ee06c12f4a8e/aercap/db/539/14888/earnings_presentation/2Q+2026+AerCap+Holdings+N.V.+Earnings+Presentation.pdf'
+          fetch 'AER-06.30.2026-Interim Report as filed.pdf' 'https://www.aercap.com/_assets/_7ec299baf03b698aa16eb0d07ba1342b/aercap/db/540/14903/file/AER-06.30.2026-Interim+Report+as+filed.pdf'
+
+          count=$(find sources -maxdepth 1 -type f -name '*.pdf' | wc -l | tr -d ' ')
+          echo "Downloaded $count full source PDFs"
+          test "$count" = "20"
+          find sources -maxdepth 1 -type f -printf '%f %s bytes\n' | sort
+
+      - name: Upload exact source PDFs as one ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AerCap_20_Official_Full_Sources
+          path: sources/*.pdf
+          if-no-files-found: error
+          compression-level: 6
+          retention-days: 1
