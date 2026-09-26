@@ -11,13 +11,16 @@ jobs:
       - name: Discover official AerCap PDF links
         shell: bash
         run: |
+          python -m pip install --quiet beautifulsoup4 requests
           python - <<'PY'
           import requests
           from bs4 import BeautifulSoup, Tag
           from urllib.parse import urljoin
 
           url='https://www.aercap.com/investors/financial-information'
-          html=requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=60).text
+          r=requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=60)
+          r.raise_for_status()
+          html=r.text
           print('status length', len(html))
           soup=BeautifulSoup(html,'html.parser')
           targets={'FY 2024','Q1 2025','Q2 2025','Q3 2025','FY 2025','Q1 2026','Q2 2026'}
