@@ -20,27 +20,36 @@ jobs:
           url='https://www.aercap.com/investors/financial-information'
           r=requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=60)
           r.raise_for_status()
-          html=r.text
-          print('status length', len(html))
-          soup=BeautifulSoup(html,'html.parser')
+          soup=BeautifulSoup(r.text,'html.parser')
           targets={'FY 2024','Q1 2025','Q2 2025','Q3 2025','FY 2025','Q1 2026','Q2 2026'}
+          seen_titles=set()
           for h in soup.find_all(['h2','h3','h4']):
               title=' '.join(h.stripped_strings)
-              if title not in targets:
+              if title not in targets or title in seen_titles:
                   continue
+              seen_titles.add(title)
               print('\n###', title)
-              seen=set()
-              node=h.next_sibling
-              while node:
-                  if isinstance(node, Tag) and node.name in ['h2','h3','h4']:
+              chosen=None
+              for anc in h.parents:
+                  if not isinstance(anc, Tag):
+                      continue
+                  links=[a for a in anc.find_all('a', href=True) if '.pdf' in a.get('href','').lower()]
+                  headings=[' '.join(x.stripped_strings) for x in anc.find_all(['h2','h3','h4'])]
+                  target_count=sum(1 for x in headings if x in targets)
+                  if len(links)>=2 and target_count==1:
+                      chosen=anc
                       break
-                  if isinstance(node, Tag):
-                      for a in node.find_all('a', href=True):
-                          text=' '.join(a.stripped_strings)
-                          href=urljoin(url,a['href'])
-                          key=(text,href)
-                          if key not in seen:
-                              seen.add(key)
-                              print(repr(text), '=>', href)
-                  node=node.next_sibling
+              if chosen is None:
+                  chosen=h.parent
+              seen=set()
+              for a in chosen.find_all('a', href=True):
+                  href=urljoin(url,a['href'])
+                  if '.pdf' not in href.lower():
+                      continue
+                  text=' '.join(a.stripped_strings)
+                  key=(text,href)
+                  if key in seen:
+                      continue
+                  seen.add(key)
+                  print(repr(text), '=>', href)
           PY
