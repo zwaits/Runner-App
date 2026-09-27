@@ -1,40 +1,61 @@
-name: Temp Danaos Source Discovery
+name: Temp Danaos Official Source Bundle
 
 on:
   pull_request:
     branches: [main]
 
 jobs:
-  discover:
+  bundle:
     runs-on: ubuntu-latest
     steps:
-      - name: Discover official Danaos PDF links
+      - name: Download 20 full official Danaos source PDFs
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --quiet beautifulsoup4 requests
-          python - <<'PY'
-          import requests
-          from bs4 import BeautifulSoup
-          from urllib.parse import urljoin
+          mkdir -p sources
+          fetch() {
+            local name="$1"
+            local url="$2"
+            echo "Downloading $name"
+            curl --fail --location --retry 4 --retry-all-errors --connect-timeout 30 --max-time 240 "$url" -o "sources/$name"
+            test -s "sources/$name"
+            test "$(head -c 4 "sources/$name")" = "%PDF"
+          }
 
-          pages = [
-            ('annual','https://www.danaos.com/investors/financial-information/annual-reports/default.aspx'),
-            ('events','https://www.danaos.com/investors/events-and-presentations/default.aspx'),
-            ('sec2026','https://www.danaos.com/investors/financial-information/sec-filings/default.aspx'),
-            ('sec2025','https://www.danaos.com/investors/financial-information/sec-filings/2025/default.aspx'),
-          ]
-          s=requests.Session(); s.headers.update({'User-Agent':'Mozilla/5.0'})
-          for label,url in pages:
-            r=s.get(url,timeout=60); r.raise_for_status()
-            soup=BeautifulSoup(r.text,'html.parser')
-            print('\n### PAGE',label,url)
-            seen=set()
-            for a in soup.find_all('a',href=True):
-              href=urljoin(url,a['href'])
-              txt=' '.join(a.stripped_strings)
-              if href in seen: continue
-              if '.pdf' in href.lower() or 'sec-filings-details' in href or 'presentation' in txt.lower() or 'annual report' in txt.lower():
-                seen.add(href)
-                print(repr(txt),'=>',href)
-          PY
+          fetch 'Danaos-Corporation-Annual-Report-2024.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2024/ar/Danaos-Corporation-Annual-Report-2024-2.pdf'
+          fetch 'Danaos-Corporation-Annual-Report-2025.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2025/ar/Danaos-Corporation_Annual-Report-2025.pdf'
+
+          fetch 'Danaos-Corporation-Earnings-Release-Q2-2024.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2024/q2/Danaos-Corporation-Earnings-Release-Q2-2024.pdf'
+          fetch 'DAC-Corporate-Presentation-August-2024.pdf' 'https://s2.q4cdn.com/951507448/files/doc_presentations/2024/08/DAC-Corporate-Presentation-August-2024.pdf'
+          fetch 'Danaos-Corporation-Earnings-Release-Q3-2024.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2024/q3/Danaos-Corporation-Earnings-Release-Q3-2024.pdf'
+          fetch 'DAC-Corporate-Presentation-November-2024.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2024/q3/DAC-Corporate-Presentation-November-2024.pdf'
+          fetch 'Danaos-Corporation-Earnings-Release-Q4-2024.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2024/q4/Danaos-Corporation-Earnings-Release-Q4-2024.pdf'
+          fetch 'DAC-Corporate-Presentation-February-2025.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2024/q4/DAC-Corporate-Presentation-February-2025.pdf'
+
+          fetch 'Danaos-Corporation-Earnings-Release-Q1-2025.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2025/q1/Danaos-Corporation-Earnings-Release-Q1-2025.pdf'
+          fetch 'DAC-Corporate-Presentation-May-2025.pdf' 'https://s2.q4cdn.com/951507448/files/doc_presentations/2025/DAC-Corporate-Presentation-May-2025.pdf'
+          fetch 'Danaos-Corporation-Earnings-Release-Q2-2025.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2025/q2/Danaos-Corporation-Earnings-Release-Q2-2025.pdf'
+          fetch 'DAC-Corporate-Presentation-August-2025.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2025/q2/DAC-Corporate-Presentation-August-2025.pdf'
+          fetch 'Danaos-Corporation-Earnings-Release-Q3-2025.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2025/q3/Danaos-Corporation-Earnings-Release-Q3-2025.pdf'
+          fetch 'Danaos-Corporation-Corporate-Presentation-November-2025.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2025/q3/Danaos-Corporation-Corporate-Presentation-November-2025.pdf'
+          fetch 'Danaos-Corporation-Earnings-Release-Q4-2025.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2025/q4/Danaos-Corporation-Earnings-Release-Q4-2025.pdf'
+          fetch 'DAC-Corporate-Presentation-February-2026.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2025/q4/DAC-Corporate-Presentation-February-2026.pdf'
+
+          fetch 'Danaos-Corporation-Earnings-Release-Q1-2026.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2026/q1/Danaos-Corporation-Earnings-Release-Q1-2026.pdf'
+          fetch 'Danaos-Corporate-Presentation-May-2026.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2026/q1/Danaos-Corporate-Presentation-May-2026.pdf'
+          fetch 'Danaos-Corporation-Earnings-Release-Q2-2026.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2026/q2/Danaos-Corporation-Earnings-Release-Q2-2026.pdf'
+          fetch 'Danaos-Corporate-Presentation-August-2026.pdf' 'https://s2.q4cdn.com/951507448/files/doc_financials/2026/q2/Danaos-Corporate-Presentation-August-2026.pdf'
+
+          count=$(find sources -maxdepth 1 -type f -name '*.pdf' | wc -l | tr -d ' ')
+          echo "Downloaded $count PDFs"
+          test "$count" = "20"
+          find sources -maxdepth 1 -type f -printf '%f %s bytes\n' | sort
+
+      - name: Upload exact source PDFs as one ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Danaos_20_Official_Full_Sources
+          path: sources/*.pdf
+          if-no-files-found: error
+          compression-level: 6
+          retention-days: 1
