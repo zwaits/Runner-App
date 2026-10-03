@@ -1,0 +1,135 @@
+name: Temp GSL Official Source Bundle
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download 20 full official GSL source PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet requests beautifulsoup4
+          python - <<'PY'
+          import os, re, requests
+          from bs4 import BeautifulSoup
+          from urllib.parse import urljoin, unquote
+
+          OUT='gsl_sources'
+          os.makedirs(OUT, exist_ok=True)
+          S=requests.Session()
+          S.headers.update({'User-Agent':'Mozilla/5.0 (compatible; research-source-downloader/1.0)'})
+
+          def get(url):
+              r=S.get(url, timeout=90)
+              r.raise_for_status()
+              return r
+
+          def pdf_from_release(page_url):
+              r=get(page_url)
+              soup=BeautifulSoup(r.text,'html.parser')
+              for a in soup.find_all('a', href=True):
+                  txt=' '.join(a.stripped_strings).lower()
+                  if 'pdf version' in txt:
+                      return urljoin(page_url,a['href'])
+              for a in soup.find_all('a', href=True):
+                  h=urljoin(page_url,a['href'])
+                  if h.lower().endswith('.pdf') or '/pdf' in h.lower():
+                      return h
+              raise RuntimeError('No PDF version found: '+page_url)
+
+          def find_link(page_url, exact_text):
+              r=get(page_url)
+              soup=BeautifulSoup(r.text,'html.parser')
+              for a in soup.find_all('a', href=True):
+                  txt=' '.join(a.stripped_strings).strip()
+                  if txt == exact_text:
+                      return urljoin(page_url,a['href'])
+              # fallback contains match
+              for a in soup.find_all('a', href=True):
+                  txt=' '.join(a.stripped_strings).strip()
+                  if exact_text.lower() in txt.lower():
+                      return urljoin(page_url,a['href'])
+              raise RuntimeError(f'Link not found: {exact_text} on {page_url}')
+
+          def ensure_pdf_url(url):
+              # direct PDF/static-file links
+              r=get(url)
+              ctype=(r.headers.get('content-type') or '').lower()
+              if r.content[:4] == b'%PDF' or 'application/pdf' in ctype:
+                  return url, r.content
+              soup=BeautifulSoup(r.text,'html.parser')
+              # SEC/IR page: pick a likely PDF document link
+              for a in soup.find_all('a', href=True):
+                  h=urljoin(url,a['href'])
+                  if h.lower().endswith('.pdf') or '/pdf' in h.lower():
+                      rr=get(h)
+                      if rr.content[:4] == b'%PDF':
+                          return h, rr.content
+              raise RuntimeError('Could not resolve PDF: '+url)
+
+          sources=[]
+          quarterly='https://www.globalshiplease.com/investors/quarterly-results'
+          quarters=[
+              ('Q1 2025','Global Ship Lease Reports Results for the First Quarter of 2025','Global Ship Lease Investor Presentation - Q1 2025'),
+              ('Q2 2025','Global Ship Lease Reports Results for the Second Quarter of 2025','Global Ship Lease Investor Presentation - Q2 2025'),
+              ('Q3 2025','Global Ship Lease Reports Results for the Third Quarter of 2025','Global Ship Lease Investor Presentation - Q3 2025'),
+              ('Q4 2025','Global Ship Lease Reports Results for the Fourth Quarter of 2025','Global Ship Lease Investor Presentation - Q4 2025'),
+              ('Q1 2026','Global Ship Lease Reports Results for the First Quarter of 2026','Global Ship Lease Investor Presentation - Q1 2026'),
+              ('Q2 2026','Global Ship Lease Reports Results for the Second Quarter of 2026','Global Ship Lease Investor Presentation - Q2 2026'),
+          ]
+          for q, reltxt, prestxt in quarters:
+              rel_page=find_link(quarterly,reltxt)
+              rel_pdf=pdf_from_release(rel_page)
+              pres=find_link(quarterly,prestxt)
+              sources.append((reltxt+'.pdf', rel_pdf))
+              sources.append((prestxt+'.pdf', pres))
+
+          annual='https://www.globalshiplease.com/investors/annual-reports'
+          for year in ('2024','2025'):
+              link=find_link(annual,f'{year} Form 20-F')
+              sources.append((f'Global Ship Lease {year} Form 20-F.pdf',link))
+
+          extras=[
+              ('Global Ship Lease Announces Newbuilding Orders.pdf','https://www.globalshiplease.com/news-releases/news-release-details/global-ship-lease-announces-newbuilding-orders'),
+              ('Global Ship Lease Announces Additional Newbuilding Orders.pdf','https://www.globalshiplease.com/news-releases/news-release-details/global-ship-lease-announces-additional-newbuilding-orders'),
+              ('Global Ship Lease Announces Agreement to Acquire Four High-Reefer ECO Containerships on Multi-Year Charters with 10-Year Financing Committed.pdf','https://www.globalshiplease.com/news-releases/news-release-details/global-ship-lease-announces-agreement-acquire-four-high-reefer'),
+              ('Global Ship Lease Announces Agreement to Acquire Three 8,600 TEU Containerships.pdf','https://www.globalshiplease.com/news-releases/news-release-details/global-ship-lease-announces-agreement-acquire-three-8600-teu'),
+          ]
+          for name,page in extras:
+              sources.append((name,pdf_from_release(page)))
+
+          event='https://www.globalshiplease.com/events/event-details/why-newbuildings-why-now-gsl-ceo-tom-lister-strategic-rationale-behind-15-ship'
+          sources.append(('Newbuilding Strategy Presentation.pdf',find_link(event,'Newbuilding Strategy Presentation')))
+          library='https://www.globalshiplease.com/download-library'
+          sources.append(('Introducing Global Ship Lease.pdf',find_link(library,'Introducing Global Ship Lease')))
+
+          assert len(sources)==20, len(sources)
+          seen=set()
+          for name,url in sources:
+              name=re.sub(r'[\\/:*?"<>|]+','-',name).strip()
+              if name in seen: raise RuntimeError('duplicate name '+name)
+              seen.add(name)
+              final_url,data=ensure_pdf_url(url)
+              if data[:4] != b'%PDF': raise RuntimeError('Not PDF: '+final_url)
+              path=os.path.join(OUT,name)
+              open(path,'wb').write(data)
+              print(f'{name}\t{len(data)}\t{final_url}')
+
+          files=os.listdir(OUT)
+          assert len(files)==20, len(files)
+          for f in files:
+              p=os.path.join(OUT,f)
+              assert open(p,'rb').read(4)==b'%PDF', f
+          PY
+          zip -j -9 GSL_Official_Full_Source_PDFs.zip gsl_sources/*.pdf
+          unzip -t GSL_Official_Full_Source_PDFs.zip
+      - name: Upload exact source PDFs as one ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GSL_20_Official_Full_Sources
+          path: GSL_Official_Full_Source_PDFs.zip
+          if-no-files-found: error
