@@ -16,7 +16,7 @@ jobs:
           python - <<'PY'
           import os, re, requests
           from bs4 import BeautifulSoup
-          from urllib.parse import urljoin, unquote
+          from urllib.parse import urljoin
 
           OUT='gsl_sources'
           os.makedirs(OUT, exist_ok=True)
@@ -48,7 +48,6 @@ jobs:
                   txt=' '.join(a.stripped_strings).strip()
                   if txt == exact_text:
                       return urljoin(page_url,a['href'])
-              # fallback contains match
               for a in soup.find_all('a', href=True):
                   txt=' '.join(a.stripped_strings).strip()
                   if exact_text.lower() in txt.lower():
@@ -56,20 +55,29 @@ jobs:
               raise RuntimeError(f'Link not found: {exact_text} on {page_url}')
 
           def ensure_pdf_url(url):
-              # direct PDF/static-file links
               r=get(url)
               ctype=(r.headers.get('content-type') or '').lower()
               if r.content[:4] == b'%PDF' or 'application/pdf' in ctype:
                   return url, r.content
               soup=BeautifulSoup(r.text,'html.parser')
-              # SEC/IR page: pick a likely PDF document link
+              candidates=[]
               for a in soup.find_all('a', href=True):
                   h=urljoin(url,a['href'])
-                  if h.lower().endswith('.pdf') or '/pdf' in h.lower():
+                  low=h.lower()
+                  if (low.endswith('.pdf') or '/pdf' in low or '/static-files/' in low or
+                      '/sec-filings/content/' in low or 'sec.gov/archives/' in low):
+                      candidates.append(h)
+              seen=set()
+              for h in candidates:
+                  if h in seen: continue
+                  seen.add(h)
+                  try:
                       rr=get(h)
-                      if rr.content[:4] == b'%PDF':
-                          return h, rr.content
-              raise RuntimeError('Could not resolve PDF: '+url)
+                  except Exception:
+                      continue
+                  if rr.content[:4] == b'%PDF' or 'application/pdf' in (rr.headers.get('content-type') or '').lower():
+                      return h, rr.content
+              raise RuntimeError('Could not resolve PDF: '+url+' candidates='+repr(candidates[:20]))
 
           sources=[]
           quarterly='https://www.globalshiplease.com/investors/quarterly-results'
